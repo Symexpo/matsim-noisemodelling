@@ -1,6 +1,7 @@
 name: Gradle Test
 
 on:
+  workflow_dispatch:
   pull_request:
     branches:
       - main
