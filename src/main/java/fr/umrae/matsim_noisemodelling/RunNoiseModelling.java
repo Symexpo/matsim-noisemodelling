@@ -16,6 +16,7 @@ import org.noise_planet.noisemodelling.wps.Receivers.Delaunay_Grid;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
@@ -64,38 +65,7 @@ class RunNoiseModelling {
     static int maxSrcDist = 750;
 
     public static void main(String[] args) throws SQLException, IOException {
-//        runNantesEdgt20p();
         cli(args);
-    }
-
-    public static void runNantesEdgt20p() throws SQLException, IOException {
-
-        String dbName = "file:///D:/SYMEXPO/matsim-nantes/edgt_20p/nantes_commune/noisemodelling/noisemodelling";
-        String osmFile = "D:\\SYMEXPO\\osm_maps\\nantes_aire_urbaine.osm.pbf";
-        String inputsFolder = "D:\\SYMEXPO\\matsim-nantes\\edgt_20p\\nantes_commune\\noisemodelling\\inputs\\";
-        String resultsFolder = "D:\\SYMEXPO\\matsim-nantes\\edgt_20p\\nantes_commune\\noisemodelling\\results\\";
-        String matsimFolder = "D:\\SYMEXPO\\matsim-nantes\\edgt_20p\\nantes_commune\\simulation_output\\";
-        int srid = 2154;
-        double populationFactor = 0.20;
-
-        doCleanDB = false;
-        doImportOSMPbf = false;
-
-        doExportRoads = false;
-        doExportBuildings = false;
-
-        doTrafficSimulation = false;
-        doExportResults = false;
-
-        // all flags inside doSimulation
-        doImportMatsimTraffic = false;
-        doCreateReceiversFromMatsim = false;
-        doCalculateNoisePropagation = false;
-        doCalculateNoiseMap = false;
-        doCalculateExposure = false;
-        doIsoNoiseMap = false;
-
-        run(dbName, osmFile, matsimFolder, inputsFolder, resultsFolder, srid, populationFactor);
     }
 
     public static void cli(String[] args) throws SQLException, IOException {
@@ -103,15 +73,18 @@ class RunNoiseModelling {
         Options options = new Options();
         Properties configFile = new Properties();
 
-        options.addRequiredOption("conf", "configFile", true, "[REQUIRED] Config file");
+        options.addOption("conf", "configFile", true, "Config file path");
+        options.addOption("genconf", "generateConfigFile", true, "Create an example config file at path");
 
         options.addOption("clean", "cleanDB",false, "Clean the database");
         options.addOption("osm", "importOsmPbf", false, "Import OSM PBF file");
+//        options.addOption("import", "importData", false, "Import data");
         options.addOption("roads", "exportRoads", false, "Export roads");
         options.addOption("buildings", "exportBuildings", false, "Export buildings");
         options.addOption("run", "runSimulation", false, "Run simulation");
         options.addOption("results", "exportResults", false, "Export results");
         options.addOption("all", "doAll", false, "Activate all flags (cleans up database and run everything)");
+
         options.addOption("h", "help", false, "Display help");
 
         CommandLineParser parser = new DefaultParser();
@@ -131,6 +104,53 @@ class RunNoiseModelling {
             return;
         }
 
+        if (cmd.hasOption("help") || cmd.hasOption("h")) {
+            formatter.printHelp("gradlew run --args=\"...\"", options);
+            return;
+        }
+
+        if (!cmd.hasOption("configFile") && !cmd.hasOption("generateConfigFile")) {
+            System.out.println("Missing config file, to create an example one use -genconf");
+            formatter.printHelp("gradlew run --args=\"...\"", options);
+            return;
+        }
+
+        if (cmd.hasOption("generateConfigFile")) {
+            String configFilePath = cmd.getOptionValue("generateConfigFile");
+            try {
+                File file = new File(configFilePath);
+                boolean created = file.createNewFile();
+                configFile.setProperty("DB_NAME", "file:///path/to/database");
+                configFile.setProperty("OSM_FILE_PATH", "path/to/osm/file.osm.pbf");
+                configFile.setProperty("MATSIM_DIR", "path/to/matsim/folder");
+                configFile.setProperty("INPUTS_DIR", "path/to/inputs/folder");
+                configFile.setProperty("RESULTS_DIR", "path/to/results/folder");
+                configFile.setProperty("SRID", "2154");
+                configFile.setProperty("POPULATION_FACTOR", "0.1");
+
+                configFile.setProperty("DO_CLEAN_DB", "False");
+                configFile.setProperty("DO_IMPORT_OSM", "False");
+                configFile.setProperty("DO_EXPORT_ROADS", "False");
+                configFile.setProperty("DO_EXPORT_BUILDINGS", "False");
+                configFile.setProperty("DO_RUN_NOISEMODELLING", "False");
+                configFile.setProperty("DO_EXPORT_RESULTS", "False");
+
+                FileOutputStream fileStream = new FileOutputStream(file);
+                configFile.store(fileStream, "An example config file for the noise modelling process");
+                fileStream.close();
+
+                System.out.println("An example config file created here : " + file.getAbsolutePath());
+                System.out.println("Default values are : " );
+                configFile.list(System.out);
+
+                return;
+            }
+            catch (Exception e) {
+                System.err.println("Error while creating example config file : " + e.getMessage());
+                return;
+            }
+        }
+
         try {
             File file = new File(cmd.getOptionValue("configFile"));
             configFile.load(new FileInputStream(file));
@@ -141,45 +161,64 @@ class RunNoiseModelling {
         }
 
         String dbName = configFile.get("DB_NAME").toString();
+        dbName = dbName.replace("\\", "/");
         try {
-            File file = new File(dbName);
-            dbName = file.toPath().toAbsolutePath().toUri().toString();
+            URI uri = URI.create(dbName);
         }
         catch (Exception e) {
-            System.out.println("Database file path not reachable : " + e.getMessage());
+            System.err.println("Database file uri is not valid  : " + e.getMessage());
             return;
         }
+
         String osmFile = configFile.get("OSM_FILE_PATH").toString();
+        if (!Files.exists(Paths.get(osmFile))) {
+            System.err.println("OSM file does not exist: " + osmFile);
+            return;
+        }
         String matsimFolder = configFile.get("MATSIM_DIR").toString();
+        if (!Files.exists(Paths.get(matsimFolder))) {
+            System.err.println("Matsim folder does not exist: " + matsimFolder);
+            return;
+        }
         String inputsFolder = configFile.get("INPUTS_DIR").toString();
+        if (!Files.exists(Paths.get(inputsFolder))) {
+            System.out.println("[WARNING] Inputs folder does not exist: " + inputsFolder);
+            // we don't have to return as the input folder is not really used
+            // return;
+        }
         String resultsFolder = configFile.get("RESULTS_DIR").toString();
-        int srid = (int) configFile.get("SRID");
+        int srid = 2154;
+        try {
+            srid = Integer.parseInt(configFile.get("SRID").toString());
+        } catch (Exception e) {
+            System.err.println("SRID is not valid: " + e.getMessage());
+            return;
+        }
         double populationFactor = 1.0;
         try {
             populationFactor = Double.parseDouble(configFile.get("POPULATION_FACTOR").toString());
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            System.err.println("Population factor is not valid: " + e.getMessage());
+            return;
+        }
 
         try {
-            new File(resultsFolder).mkdirs();
+            Files.createDirectories(Paths.get(resultsFolder));
         }
         catch (Exception e) {
             System.out.println("Error trying to create the results folder : " + e.getMessage());
             return;
         }
 
-        doCleanDB = cmd.hasOption("cleanDB") || cmd.hasOption("doAll");
-        doImportOSMPbf = cmd.hasOption("importOsmPbf") || cmd.hasOption("doAll");
+        doCleanDB = cmd.hasOption("cleanDB") || cmd.hasOption("doAll") || Boolean.parseBoolean((String) configFile.get("DO_CLEAN_DB"));
+        doImportOSMPbf = cmd.hasOption("importOsmPbf") || cmd.hasOption("doAll") || Boolean.parseBoolean((String) configFile.get("DO_IMPORT_OSM"));
 
-        doExportRoads = cmd.hasOption("exportRoads") || cmd.hasOption("doAll");
-        doExportBuildings = cmd.hasOption("exportBuildings") || cmd.hasOption("doAll");
+        doExportRoads = cmd.hasOption("exportRoads") || cmd.hasOption("doAll") || Boolean.parseBoolean((String) configFile.get("DO_EXPORT_ROADS"));
+        doExportBuildings = cmd.hasOption("exportBuildings") || cmd.hasOption("doAll") || Boolean.parseBoolean((String) configFile.get("DO_EXPORT_BUILDINGS"));
 
-        doTrafficSimulation = cmd.hasOption("runSimulation") || cmd.hasOption("doAll");
-        doExportResults = cmd.hasOption("exportResults") || cmd.hasOption("doAll");
+        doTrafficSimulation = cmd.hasOption("runSimulation") || cmd.hasOption("doAll") || Boolean.parseBoolean((String) configFile.get("DO_RUN_NOISEMODELLING"));
+        doExportResults = cmd.hasOption("exportResults") || cmd.hasOption("doAll") || Boolean.parseBoolean((String) configFile.get("DO_EXPORT_RESULTS"));
 
-        if (cmd.hasOption("help") || cmd.hasOption("h")) {
-            formatter.printHelp("java run ?", options);
-            return;
-        }
         run(dbName, osmFile, matsimFolder, inputsFolder, resultsFolder, srid, populationFactor);
     }
 
@@ -227,12 +266,6 @@ class RunNoiseModelling {
             System.out.println("Nothing to import");
         }
 
-        if (doExportRoads) {
-            new Export_Table().exec(connection, Map.of(
-                    "tableToExport", "MATSIM_ROADS",
-                    "exportPath", Paths.get(resultsFolder, "MATSIM_ROADS.geojson")
-            ));
-        }
         if (doExportBuildings) {
             new Export_Table().exec(connection, Map.of(
                     "tableToExport", "BUILDINGS",
@@ -434,6 +467,13 @@ class RunNoiseModelling {
                         "exportPath", Paths.get(resultsFolder, "CONTOURING_NOISE_MAP.geojson")
                 ));
             }
+        }
+
+        if (doExportRoads) {
+            new Export_Table().exec(connection, Map.of(
+                    "tableToExport", "MATSIM_ROADS",
+                    "exportPath", Paths.get(resultsFolder, "MATSIM_ROADS.geojson")
+            ));
         }
 
         if (doExportResults) {
