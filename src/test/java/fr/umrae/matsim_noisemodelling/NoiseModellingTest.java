@@ -3,18 +3,112 @@
  */
 package fr.umrae.matsim_noisemodelling;
 
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.SQLException;
+import java.util.Properties;
+import java.util.zip.ZipFile;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class NoiseModellingTest {
-    @Test void testRunNoiseModelling() throws SQLException, IOException {
+
+    static boolean cleanTempDir = false;
+    static Path tempDataDir;
+
+    @BeforeAll
+    static void downloadAndUnzip() throws IOException {
+        // URL of the file to download
+        String fileUrl = "https://github.com/Universite-Gustave-Eiffel/NoiseModelling/releases/download/v3.3.1/scenario_matsim.zip";
+
+        // Create a temporary directory
+        tempDataDir = Files.createTempDirectory("noise_modelling_test_");
+        Path zipFilePath = tempDataDir.resolve("scenario_matsim.zip");
+
+        // Download the file
+        try (InputStream in = new URL(fileUrl).openStream()) {
+            Files.copy(in, zipFilePath);
+        }
+
+        // Unzip the file
+        ZipFile zipFile = new ZipFile(zipFilePath.toFile());
+        zipFile.stream().forEach(entry -> {
+            try {
+                Path entryPath = tempDataDir.resolve(entry.getName());
+                if (entry.isDirectory()) {
+                    Files.createDirectories(entryPath);
+                } else {
+                    Files.createDirectories(entryPath.getParent());
+                    try (InputStream in = zipFile.getInputStream(entry)) {
+                        Files.copy(in, entryPath);
+                    }
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        // Clean up
+        zipFile.close();
+
+        Properties configFile = new Properties();
+        configFile.setProperty("DB_NAME", "file:///" + tempDataDir + "/noisemodelling");
+        configFile.setProperty("OSM_FILE_PATH", tempDataDir + "/nantes_ile.osm.pbf");
+        configFile.setProperty("MATSIM_DIR", tempDataDir.toString());
+        configFile.setProperty("INPUTS_DIR", tempDataDir + "/inputs");
+        configFile.setProperty("RESULTS_DIR", tempDataDir + "/results");
+        configFile.setProperty("SRID", "2154");
+        configFile.setProperty("POPULATION_FACTOR", "0.01");
+
+        configFile.store(Files.newOutputStream(tempDataDir.resolve("noisemodelling.properties")), null);
+    }
+
+    @AfterAll
+    static void cleanup() throws IOException {
+        if (cleanTempDir) {
+            // Delete the temporary directory and its contents
+            Files.walk(tempDataDir)
+                    .sorted((a, b) -> b.compareTo(a)) // Sort in reverse order to delete files before directories
+                    .forEach(path -> {
+                        try {
+                            Files.delete(path);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+        }
+    }
+
+    @Test
+    void testHelp() throws SQLException, IOException {
         String[] args = {"--help"};
         RunNoiseModelling.main(args);
         // Check that the main method runs without throwing an exception
         assertTrue(true);
     }
+
+    @Test
+    void testCliGenerateConfig() throws IOException, SQLException {
+        Path paramPath = Path.of(tempDataDir + "/example.properties");
+        String[] args = {"-genconf", paramPath.toString()};
+        RunNoiseModelling.main(args);
+        // Check that the main method runs without throwing an exception
+        assertTrue(paramPath.toFile().exists());
+    }
+
+    @Test
+    void testCleanDB() throws SQLException, IOException {
+        String[] args = {"-conf", tempDataDir + "/noisemodelling.properties", "-clean"};
+        RunNoiseModelling.main(args);
+        // Check that the main method runs without throwing an exception
+        assertTrue(true);
+    }
+
 }
