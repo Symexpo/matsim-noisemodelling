@@ -19,8 +19,7 @@ build
 # Package Files #
 *.jar
 !gradle-wrapper.jar
-!gs-script-core-2.15.1.jar
-!gs-script-core-2.15.1-tests.jar
+!libs/
 *.war
 *.nar
 *.ear
