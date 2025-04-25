@@ -14,7 +14,7 @@ repositories {
     // Use Maven Central for resolving dependencies.
     mavenCentral()
     maven {
-        url "libs/"
+        url "${project.projectDir}/libs"
     }
     maven {
         url "https://repo.osgeo.org/repository/release/"
