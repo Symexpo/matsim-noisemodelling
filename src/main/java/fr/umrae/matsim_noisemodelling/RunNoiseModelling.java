@@ -48,7 +48,7 @@ class RunNoiseModelling {
     static boolean doCalculateNoisePropagation = true;
     static boolean doCalculateNoiseMap = true;
     static boolean doCalculateExposure = true;
-    static boolean doIsoNoiseMap = true;
+    static boolean doIsoNoiseMap = false;
 
     static int timeBinSize = 900;
     static int timeBinMin = 0;
@@ -75,6 +75,20 @@ class RunNoiseModelling {
 
         options.addOption("conf", "configFile", true, "Config file path");
         options.addOption("genconf", "generateConfigFile", true, "Create an example config file at path");
+
+        options.addOption("tbs", "timeBinSize", true, "Time bin size in seconds (default: 900)");
+        options.addOption("tbmin", "timeBinMin", true, "Time bin min in seconds (default: 0)");
+        options.addOption("tbmax", "timeBinMax", true, "Time bin max in seconds (default: 86400)");
+
+//        options.addOption("ia", "ignoreAgents", true, "Ignore agents in the simulation");
+        options.addOption("rec", "receiversMethod", true, "Receivers method : 'closest' (default) or 'random'");
+
+        options.addOption("diffH", "diffHorizontal", true, "Diffusion horizontal (default: true)");
+        options.addOption("diffV", "diffVertical", true, "Diffusion vertical (default: false)");
+
+        options.addOption("reflOrder", "reflOrder", true, "Reflection order (default: 1)");
+        options.addOption("maxReflDist", "maxReflDist", true, "Max reflection distance (default: 50)");
+        options.addOption("maxSrcDist", "maxSrcDist", true, "Max source distance (default: 750)");
 
         options.addOption("clean", "cleanDB",false, "Clean the database");
         options.addOption("osm", "importOsmPbf", false, "Import OSM PBF file");
@@ -127,6 +141,20 @@ class RunNoiseModelling {
                 configFile.setProperty("RESULTS_DIR", "path/to/results/folder");
                 configFile.setProperty("SRID", "2154");
                 configFile.setProperty("POPULATION_FACTOR", "0.1");
+
+                configFile.setProperty("timeBinSize", "900");
+                configFile.setProperty("timeBinMin", "0");
+                configFile.setProperty("timeBinMax", "86400");
+
+                configFile.setProperty("receiversMethod", "closest");
+                configFile.setProperty("ignoreAgents", "False");
+
+                configFile.setProperty("diffHorizontal", "True");
+                configFile.setProperty("diffVertical", "False");
+
+                configFile.setProperty("reflOrder", "1");
+                configFile.setProperty("maxReflDist", "50");
+                configFile.setProperty("maxSrcDist", "750");
 
                 configFile.setProperty("DO_CLEAN_DB", "False");
                 configFile.setProperty("DO_IMPORT_OSM", "False");
@@ -210,6 +238,41 @@ class RunNoiseModelling {
             return;
         }
 
+        if (cmd.hasOption("timeBinSize")) {
+            timeBinSize = Integer.parseInt(cmd.getOptionValue("timeBinSize"));
+        }
+        if (cmd.hasOption("timeBinMin")) {
+            timeBinMin = Integer.parseInt(cmd.getOptionValue("timeBinMin"));
+        }
+        if (cmd.hasOption("timeBinMax")) {
+            timeBinMax = Integer.parseInt(cmd.getOptionValue("timeBinMax"));
+        }
+        if (cmd.hasOption("receiversMethod")) {
+            if (!Objects.equals(cmd.getOptionValue("receiversMethod"), "closest") && !Objects.equals(cmd.getOptionValue("receiversMethod"), "random")) {
+                System.err.println("Receivers method must be 'closest' (default) or 'random'");
+                return;
+            }
+            receiversMethod = cmd.getOptionValue("receiversMethod");
+        }
+//        if (cmd.hasOption("ignoreAgents")) {
+//            ignoreAgents = cmd.getOptionValue("ignoreAgents");
+//        }
+        if (cmd.hasOption("diffHorizontal")) {
+            diffHorizontal = Boolean.parseBoolean(cmd.getOptionValue("diffHorizontal"));
+        }
+        if (cmd.hasOption("diffVertical")) {
+            diffVertical = Boolean.parseBoolean(cmd.getOptionValue("diffVertical"));
+        }
+        if (cmd.hasOption("reflOrder")) {
+            reflOrder = Integer.parseInt(cmd.getOptionValue("reflOrder"));
+        }
+        if (cmd.hasOption("maxReflDist")) {
+            maxReflDist = Integer.parseInt(cmd.getOptionValue("maxReflDist"));
+        }
+        if (cmd.hasOption("maxSrcDist")) {
+            maxSrcDist = Integer.parseInt(cmd.getOptionValue("maxSrcDist"));
+        }
+
         doCleanDB = cmd.hasOption("cleanDB") || cmd.hasOption("doAll") || Boolean.parseBoolean((String) configFile.get("DO_CLEAN_DB"));
         doImportOSMPbf = cmd.hasOption("importOsmPbf") || cmd.hasOption("doAll") || Boolean.parseBoolean((String) configFile.get("DO_IMPORT_OSM"));
 
@@ -218,6 +281,30 @@ class RunNoiseModelling {
 
         doTrafficSimulation = cmd.hasOption("runSimulation") || cmd.hasOption("doAll") || Boolean.parseBoolean((String) configFile.get("DO_RUN_NOISEMODELLING"));
         doExportResults = cmd.hasOption("exportResults") || cmd.hasOption("doAll") || Boolean.parseBoolean((String) configFile.get("DO_EXPORT_RESULTS"));
+
+        System.out.println("Running NoiseModelling with parameters:");
+        System.out.println("dbName: " + dbName);
+        System.out.println("osmFile: " + osmFile);
+        System.out.println("matsimFolder: " + matsimFolder);
+        System.out.println("inputsFolder: " + inputsFolder);
+        System.out.println("resultsFolder: " + resultsFolder);
+        System.out.println("srid: " + srid);
+        System.out.println("populationFactor: " + populationFactor);
+        System.out.println("doCleanDB: " + doCleanDB);
+        System.out.println("doImportOSMPbf: " + doImportOSMPbf);
+        System.out.println("doExportRoads: " + doExportRoads);
+        System.out.println("doExportBuildings: " + doExportBuildings);
+        System.out.println("doTrafficSimulation: " + doTrafficSimulation);
+        System.out.println("doExportResults: " + doExportResults);
+        System.out.println("timeBinSize: " + timeBinSize);
+        System.out.println("timeBinMin: " + timeBinMin);
+        System.out.println("timeBinMax: " + timeBinMax);
+        System.out.println("receiversMethod: " + receiversMethod);
+        System.out.println("diffHorizontal: " + diffHorizontal);
+        System.out.println("diffVertical: " + diffVertical);
+        System.out.println("reflOrder: " + reflOrder);
+        System.out.println("maxReflDist: " + maxReflDist);
+        System.out.println("maxSrcDist: " + maxSrcDist);
 
         run(dbName, osmFile, matsimFolder, inputsFolder, resultsFolder, srid, populationFactor);
     }
@@ -260,6 +347,7 @@ class RunNoiseModelling {
                     "ignoreRoads", true,
                     "removeTunnels", false
             ));
+            sql.execute("DELETE FROM BUILDINGS WHERE ST_IsEmpty(THE_GEOM);");
         }
 
         if (doImportData) {
@@ -344,10 +432,10 @@ class RunNoiseModelling {
                 new Noise_level_from_source().exec(connection, params);
 
                 sql.execute("DROP TABLE IF EXISTS ATTENUATION_TRAFFIC");
-                sql.execute("ALTER TABLE LDAY_GEOM RENAME TO ATTENUATION_TRAFFIC");
+                sql.execute("ALTER TABLE RECEIVERS_LEVEL RENAME TO ATTENUATION_TRAFFIC");
             }
             if (doCalculateNoiseMap) {
-                new Noise_From_Attenuation_Matrix_MatSim().exec(connection, Map.of(
+                Noise_From_Attenuation_Matrix_Local.exec(connection, Map.of(
                         "matsimRoads", "MATSIM_ROADS",
                         "matsimRoadsLw", "MATSIM_ROADS_LW",
                         "attenuationTable", "ATTENUATION_TRAFFIC",
@@ -398,9 +486,9 @@ class RunNoiseModelling {
 
                 new Noise_level_from_source().exec(connection, params);
                 sql.execute("DROP TABLE IF EXISTS ATTENUATION_ISO_MAP");
-                sql.execute("ALTER TABLE LDAY_GEOM RENAME TO ATTENUATION_ISO_MAP");
+                sql.execute("ALTER TABLE RECEIVERS_LEVEL RENAME TO ATTENUATION_ISO_MAP");
 
-                new Noise_From_Attenuation_Matrix_MatSim().exec(connection, Map.of(
+                Noise_From_Attenuation_Matrix_Local.exec(connection, Map.of(
                         "matsimRoads", "MATSIM_ROADS",
                         "matsimRoadsLw", "MATSIM_ROADS_LW",
                         "attenuationTable", "ATTENUATION_ISO_MAP",

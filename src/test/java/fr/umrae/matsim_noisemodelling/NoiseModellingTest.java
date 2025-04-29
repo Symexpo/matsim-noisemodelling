@@ -7,6 +7,9 @@ package fr.umrae.matsim_noisemodelling;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,15 +22,16 @@ import java.util.zip.ZipFile;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class NoiseModellingTest {
 
     static boolean cleanTempDir = false;
     static Path tempDataDir;
 
     @BeforeAll
-    static void downloadAndUnzip() throws IOException {
+    static void setupTests() throws IOException {
         // URL of the file to download
-        String fileUrl = "https://github.com/Universite-Gustave-Eiffel/NoiseModelling/releases/download/v3.3.1/scenario_matsim.zip";
+        String fileUrl = "https://github.com/Symexpo/matsim-noisemodelling/releases/download/v5.0.0/scenario_matsim.zip";
 
         // Create a temporary directory
         tempDataDir = Files.createTempDirectory("noise_modelling_test_");
@@ -55,19 +59,27 @@ class NoiseModellingTest {
                 throw new RuntimeException(e);
             }
         });
+
         // Clean up
         zipFile.close();
 
         Properties configFile = new Properties();
         configFile.setProperty("DB_NAME", "file:///" + tempDataDir + "/noisemodelling");
-        configFile.setProperty("OSM_FILE_PATH", tempDataDir + "/nantes_ile.osm.pbf");
+        configFile.setProperty("OSM_FILE_PATH", tempDataDir + "/nantes_mini.osm.pbf");
         configFile.setProperty("MATSIM_DIR", tempDataDir.toString());
         configFile.setProperty("INPUTS_DIR", tempDataDir + "/inputs");
         configFile.setProperty("RESULTS_DIR", tempDataDir + "/results");
         configFile.setProperty("SRID", "2154");
-        configFile.setProperty("POPULATION_FACTOR", "0.01");
+        configFile.setProperty("POPULATION_FACTOR", "0.001");
 
         configFile.store(Files.newOutputStream(tempDataDir.resolve("noisemodelling.properties")), null);
+
+        RunNoiseModelling.reflOrder = 1;
+        RunNoiseModelling.maxReflDist = 10;
+        RunNoiseModelling.maxSrcDist = 100;
+        RunNoiseModelling.timeBinMin = 3600 * 6;
+        RunNoiseModelling.timeBinMax = 3600 * 18;
+        RunNoiseModelling.timeBinSize = 3600;
     }
 
     @AfterAll
@@ -87,6 +99,7 @@ class NoiseModellingTest {
     }
 
     @Test
+    @Order(1)
     void testHelp() throws SQLException, IOException {
         String[] args = {"--help"};
         RunNoiseModelling.main(args);
@@ -95,6 +108,7 @@ class NoiseModellingTest {
     }
 
     @Test
+    @Order(2)
     void testCliGenerateConfig() throws IOException, SQLException {
         Path paramPath = Path.of(tempDataDir + "/example.properties");
         String[] args = {"-genconf", paramPath.toString()};
@@ -104,6 +118,55 @@ class NoiseModellingTest {
     }
 
     @Test
+    @Order(3)
+    void testCliConfig() throws IOException, SQLException {
+        Path paramPath = Path.of(tempDataDir + "/noisemodelling.properties");
+        String[] args = {"-conf", paramPath.toString()};
+        RunNoiseModelling.main(args);
+        // Check that the main method runs without throwing an exception
+        assertTrue(paramPath.toFile().exists());
+    }
+
+    @Test
+    @Order(4)
+    void testCliOsm() throws IOException, SQLException {
+        Path paramPath = Path.of(tempDataDir + "/noisemodelling.properties");
+        String[] args = {"-conf", paramPath.toString(), "-osm"};
+        RunNoiseModelling.main(args);
+        // Check that the main method runs without throwing an exception
+        assertTrue(true);
+    }
+
+
+    @Test
+    @Order(5)
+    void testCliExportBuidlings() throws IOException, SQLException {
+        Path paramPath = Path.of(tempDataDir + "/noisemodelling.properties");
+        String[] args = {"-conf", paramPath.toString(), "--exportBuildings"};
+        RunNoiseModelling.main(args);
+        // Check that the main method runs without throwing an exception
+        Path buildingsPath = Path.of(tempDataDir + "/results/BUILDINGS.geojson");
+        assertTrue(buildingsPath.toFile().exists());
+    }
+
+    @Test
+    @Order(10)
+    void testCliRunSimulation() throws IOException, SQLException {
+        Path paramPath = Path.of(tempDataDir + "/noisemodelling.properties");
+        String[] args = {
+                "-conf", paramPath.toString(),
+                "-osm",
+                "--runSimulation",
+                "-results",
+        };
+        RunNoiseModelling.main(args);
+        // Check that the main method runs without throwing an exception
+        Path resultPath = Path.of(tempDataDir + "/results/RESULT_GEOM.shp");
+        assertTrue(resultPath.toFile().exists());
+    }
+
+    @Test
+    @Order(99)
     void testCleanDB() throws SQLException, IOException {
         String[] args = {"-conf", tempDataDir + "/noisemodelling.properties", "-clean"};
         RunNoiseModelling.main(args);
