@@ -173,10 +173,6 @@ public class RunComputeExposure {
             }
 
             if (doCalculateNoisePropagation) {
-//                new ZerodB_Source_From_Roads().exec(connection, Map.of(
-//                        "roadsTableName", "MATSIM_ROADS",
-//                        "sourcesTableName", "SOURCES_0DB"
-//                ));
                 Map<String, Object> params = new HashMap<>();
                 params.put("tableBuilding", "BUILDINGS");
                 params.put("tableReceivers", "ACTIVITIES_RECEIVERS");
