@@ -52,7 +52,7 @@ java {
 
 application {
     // Define the main class for the application.
-    mainClass = 'fr.umrae.matsim_noisemodelling.RunNoiseModelling'
+    mainClass = 'fr.umrae.matsim_noisemodelling.RunCli'
 }
 
 tasks.named('test') {
