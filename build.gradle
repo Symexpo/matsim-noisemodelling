@@ -36,8 +36,14 @@ repositories {
     }
 }
 
+def noisemodelling_version = '5.0.1-SNAPSHOT'
+
 dependencies {
-    implementation 'org.orbisgis:noisemodelling-wps:5.0.0'
+    implementation "org.orbisgis:noisemodelling-wps:$noisemodelling_version"
+    implementation "org.orbisgis:noisemodelling-emission:$noisemodelling_version"
+    implementation "org.orbisgis:noisemodelling-pathfinder:$noisemodelling_version"
+    implementation "org.orbisgis:noisemodelling-jdbc:$noisemodelling_version"
+    implementation "org.orbisgis:noisemodelling-propagation:$noisemodelling_version"
     implementation group: 'org.orbisgis', name: 'h2gis', version: '[2.2, 3)'
     implementation group: 'commons-cli', name: 'commons-cli', version: '1.4'
     implementation group: 'org.codehaus.groovy', name: 'groovy-all', version: '2.5.+'
