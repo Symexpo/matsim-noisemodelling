@@ -95,19 +95,20 @@ public class RunCli {
                 configFile.setProperty("SRID", "2154");
                 configFile.setProperty("POPULATION_FACTOR", "0.1");
 
-                configFile.setProperty("timeBinSize", "900");
-                configFile.setProperty("timeBinMin", "0");
-                configFile.setProperty("timeBinMax", "86400");
+                configFile.setProperty("TIME_BIN_SIZE", "900");
+                configFile.setProperty("TIME_BIN_MIN", "0");
+                configFile.setProperty("TIME_BIN_MAX", "86400");
 
-                configFile.setProperty("receiversMethod", "closest");
-                configFile.setProperty("ignoreAgents", "False");
+                configFile.setProperty("COMPUTE", "exposure");
 
-                configFile.setProperty("diffHorizontal", "True");
-                configFile.setProperty("diffVertical", "False");
+                configFile.setProperty("RECEIVERS_METHOD", "closest");
 
-                configFile.setProperty("reflOrder", "1");
-                configFile.setProperty("maxReflDist", "50");
-                configFile.setProperty("maxSrcDist", "750");
+                configFile.setProperty("DIFF_HORIZONTAL", "True");
+                configFile.setProperty("DIFF_VERTICAL", "False");
+
+                configFile.setProperty("REFL_ORDER", "1");
+                configFile.setProperty("MAX_REFL_DIST", "50");
+                configFile.setProperty("MAX_SRC_DIST", "750");
 
                 configFile.setProperty("DO_CLEAN_DB", "False");
                 configFile.setProperty("DO_IMPORT_OSM", "False");
@@ -191,7 +192,7 @@ public class RunCli {
             return;
         }
 
-        String compute = "exposure";
+        String compute = configFile.getOrDefault("COMPUTE", "exposure").toString();
         if (!cmd.hasOption("compute")) {
             System.out.println("Compute method not specified, using default 'exposure'");
         }
@@ -207,19 +208,19 @@ public class RunCli {
         }
 
 
-        int timeBinSize = 900;
+        int timeBinSize =  Integer.parseInt(configFile.getOrDefault("TIME_BIN_SIZE", 900).toString());
         if (cmd.hasOption("timeBinSize")) {
             timeBinSize = Integer.parseInt(cmd.getOptionValue("timeBinSize"));
         }
-        int timeBinMin = 0;
+        int timeBinMin = Integer.parseInt(configFile.getOrDefault("TIME_BIN_MIN", 0).toString());
         if (cmd.hasOption("timeBinMin")) {
             timeBinMin = Integer.parseInt(cmd.getOptionValue("timeBinMin"));
         }
-        int timeBinMax = 86400;
+        int timeBinMax = Integer.parseInt(configFile.getOrDefault("TIME_BIN_MAX", 86400).toString());
         if (cmd.hasOption("timeBinMax")) {
             timeBinMax = Integer.parseInt(cmd.getOptionValue("timeBinMax"));
         }
-        String receiversMethod = "closest";
+        String receiversMethod = configFile.getOrDefault("RECEIVERS_METHOD", "closest").toString();
         if (cmd.hasOption("receiversMethod")) {
             if (!Objects.equals(cmd.getOptionValue("receiversMethod"), "closest") && !Objects.equals(cmd.getOptionValue("receiversMethod"), "random")) {
                 System.err.println("Receivers method must be 'closest' (default) or 'random'");
@@ -227,23 +228,23 @@ public class RunCli {
             }
             receiversMethod = cmd.getOptionValue("receiversMethod");
         }
-        boolean diffHorizontal = true;
+        boolean diffHorizontal = Boolean.parseBoolean(configFile.getOrDefault("DIFF_HORIZONTAL", "true").toString());
         if (cmd.hasOption("diffHorizontal")) {
             diffHorizontal = Boolean.parseBoolean(cmd.getOptionValue("diffHorizontal"));
         }
-        boolean diffVertical = false;
+        boolean diffVertical = Boolean.parseBoolean(configFile.getOrDefault("DIFF_VERTICAL", "false").toString());;
         if (cmd.hasOption("diffVertical")) {
             diffVertical = Boolean.parseBoolean(cmd.getOptionValue("diffVertical"));
         }
-        int reflOrder = 1;
+        int reflOrder =  Integer.parseInt(configFile.getOrDefault("REFL_ORDER", 1).toString());;
         if (cmd.hasOption("reflOrder")) {
             reflOrder = Integer.parseInt(cmd.getOptionValue("reflOrder"));
         }
-        int maxReflDist = 50;
+        int maxReflDist =  Integer.parseInt(configFile.getOrDefault("MAX_REFL_DIST", 50).toString());
         if (cmd.hasOption("maxReflDist")) {
             maxReflDist = Integer.parseInt(cmd.getOptionValue("maxReflDist"));
         }
-        int maxSrcDist = 750;
+        int maxSrcDist = Integer.parseInt(configFile.getOrDefault("MAX_SRC_DIST", 750).toString());
         if (cmd.hasOption("maxSrcDist")) {
             maxSrcDist = Integer.parseInt(cmd.getOptionValue("maxSrcDist"));
         }
