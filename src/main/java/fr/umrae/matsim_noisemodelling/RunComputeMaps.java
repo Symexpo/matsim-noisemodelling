@@ -1,9 +1,9 @@
 package fr.umrae.matsim_noisemodelling;
 
 import groovy.sql.Sql;
-import org.apache.commons.cli.*;
 import org.h2.Driver;
 import org.h2gis.functions.factory.H2GISFunctions;
+import org.h2gis.utilities.wrapper.ConnectionWrapper;
 import org.noise_planet.noisemodelling.wps.Acoustic_Tools.Create_Isosurface;
 import org.noise_planet.noisemodelling.wps.Database_Manager.Clean_Database;
 import org.noise_planet.noisemodelling.wps.Experimental_Matsim.Noise_From_Attenuation_Matrix_MatSim;
@@ -14,8 +14,6 @@ import org.noise_planet.noisemodelling.wps.NoiseModelling.Noise_level_from_sourc
 import org.noise_planet.noisemodelling.wps.Receivers.Delaunay_Grid;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
@@ -86,6 +84,7 @@ class RunComputeMaps {
             Driver.load();
             connection = DriverManager.getConnection(databasePath, "", "");
             H2GISFunctions.load(connection);
+            connection = new ConnectionWrapper(connection);
         }
 
         sql = new Sql(connection);
@@ -156,11 +155,13 @@ class RunComputeMaps {
                 params.put("confDiffVertical", diffVertical);
                 params.put("confDiffHorizontal", diffHorizontal);
 
-                new Noise_level_from_source().exec(connection, params);
+
+                ConnectionWrapper wrapper = new ConnectionWrapper(connection);
+                new Noise_level_from_source().exec(wrapper, params);
                 sql.execute("DROP TABLE IF EXISTS ATTENUATION_ISO_MAP");
                 sql.execute("ALTER TABLE RECEIVERS_LEVEL RENAME TO ATTENUATION_ISO_MAP");
 
-                Noise_From_Attenuation_Matrix_Local.exec(connection, Map.of(
+                new Noise_From_Attenuation_Matrix_MatSim().exec(connection, Map.of(
                         "matsimRoads", "MATSIM_ROADS",
                         "matsimRoadsLw", "MATSIM_ROADS_LW",
                         "attenuationTable", "ATTENUATION_ISO_MAP",

@@ -3,9 +3,9 @@ package fr.umrae.matsim_noisemodelling;
 import groovy.sql.Sql;
 import org.h2.Driver;
 import org.h2gis.functions.factory.H2GISFunctions;
+import org.h2gis.utilities.wrapper.ConnectionWrapper;
 import org.noise_planet.noisemodelling.wps.Database_Manager.Clean_Database;
 import org.noise_planet.noisemodelling.wps.Experimental_Matsim.*;
-import org.noise_planet.noisemodelling.wps.Geometric_Tools.ZerodB_Source_From_Roads;
 import org.noise_planet.noisemodelling.wps.Import_and_Export.Export_Table;
 import org.noise_planet.noisemodelling.wps.Import_and_Export.Import_OSM;
 import org.noise_planet.noisemodelling.wps.NoiseModelling.Noise_level_from_source;
@@ -90,6 +90,7 @@ public class RunComputeExposure {
             Driver.load();
             connection = DriverManager.getConnection(databasePath, "", "");
             H2GISFunctions.load(connection);
+            connection = new ConnectionWrapper(connection);
         }
 
         sql = new Sql(connection);
@@ -194,7 +195,7 @@ public class RunComputeExposure {
                 sql.execute("ALTER TABLE RECEIVERS_LEVEL RENAME TO ATTENUATION_TRAFFIC");
             }
             if (doCalculateNoiseMap) {
-                Noise_From_Attenuation_Matrix_Local.exec(connection, Map.of(
+                new Noise_From_Attenuation_Matrix_MatSim().exec(connection, Map.of(
                         "matsimRoads", "MATSIM_ROADS",
                         "matsimRoadsLw", "MATSIM_ROADS_LW",
                         "attenuationTable", "ATTENUATION_TRAFFIC",
