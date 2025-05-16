@@ -48,11 +48,10 @@ dependencies {
     implementation group: 'commons-cli', name: 'commons-cli', version: '1.4'
     implementation group: 'org.codehaus.groovy', name: 'groovy-all', version: '2.5.+'
 }
-
-// Apply a specific Java toolchain to ease working on different environments.
 java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(11)
+    compileJava {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 }
 
