@@ -132,6 +132,8 @@ class RunComputeMaps {
                 params.put("populationFactor", populationFactor);
 
                 new Traffic_From_Events().exec(connection, params);
+
+                sql.execute("UPDATE MATSIM_ROADS SET THE_GEOM = ST_SetSrid(THE_GEOM, " + srid + ")");
             }
 
             if (doIsoNoiseMap) {
